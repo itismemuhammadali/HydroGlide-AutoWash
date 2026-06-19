@@ -1,0 +1,134 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isCustomer(userId) {
+      return isAuthenticated() && 
+             request.auth.uid == userId &&
+             get(/databases/$(database)/documents/users/$(userId)).data.role == 'customer';
+    }
+
+    function isEmployee(userId) {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(userId)).data.role == 'employee';
+    }
+
+    function isAdmin(userId) {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(userId)).data.role == 'admin';
+    }
+
+    function isOwnUser(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function userExists(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId));
+    }
+
+    // Users collection rules
+    match /users/{userId} {
+      // Only authenticated users can read their own profile
+      allow read: if isOwnUser(userId);
+      
+      // Admins can read any user profile
+      allow read: if isAuthenticated() && 
+                     isAdmin(request.auth.uid);
+      
+      // Users can create their own profile during signup
+      allow create: if !userExists(userId) &&
+                       request.auth.uid == userId &&
+                       request.resource.data.role == 'customer' &&
+                       request.resource.data.keys().hasAll(['email', 'name', 'role', 'createdAt']) &&
+                       request.resource.data.email == request.auth.token.email;
+      
+      // Users can update their own profile
+      allow update: if isOwnUser(userId) &&
+                       !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'id']) &&
+                       request.resource.data.updatedAt == request.time &&
+                       request.auth.uid == resource.data.id;
+      
+      // Admins can update any user profile
+      allow update: if isAdmin(request.auth.uid) &&
+                       resource.data.keys().hasAll(['role', 'email', 'name']);
+      
+      // Only admins can delete user documents
+      allow delete: if isAdmin(request.auth.uid);
+    }
+
+    // Bookings collection rules (for future use)
+    match /bookings/{bookingId} {
+      // Customers can create bookings
+      allow create: if isCustomer(request.auth.uid) &&
+                       request.resource.data.customerId == request.auth.uid &&
+                       request.resource.data.keys().hasAll(['customerId', 'createdAt']);
+      
+      // Customers can read their own bookings
+      allow read: if isCustomer(request.auth.uid) &&
+                     resource.data.customerId == request.auth.uid;
+      
+      // Employees can read bookings assigned to them
+      allow read: if isEmployee(request.auth.uid);
+      
+      // Admins can read all bookings
+      allow read: if isAdmin(request.auth.uid);
+      
+      // Customers can update their own bookings (if not completed)
+      allow update: if isCustomer(request.auth.uid) &&
+                       resource.data.customerId == request.auth.uid &&
+                       resource.data.status != 'completed';
+      
+      // Employees can update booking status
+      allow update: if isEmployee(request.auth.uid) &&
+                       request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['status', 'updatedAt']);
+      
+      // Admins can update any field
+      allow update: if isAdmin(request.auth.uid);
+    }
+
+    // Services collection rules (for future use)
+    match /services/{serviceId} {
+      // All authenticated users can read services
+      allow read: if isAuthenticated();
+      
+      // Only admins can write services
+      allow write: if isAdmin(request.auth.uid);
+    }
+
+    // Reviews collection rules (for future use)
+    match /reviews/{reviewId} {
+      // Anyone can read reviews
+      allow read: if isAuthenticated();
+      
+      // Customers can create reviews for their bookings
+      allow create: if isCustomer(request.auth.uid) &&
+                       request.resource.data.customerId == request.auth.uid;
+      
+      // Customers can update their own reviews
+      allow update: if isCustomer(request.auth.uid) &&
+                       resource.data.customerId == request.auth.uid;
+      
+      // Admins can delete inappropriate reviews
+      allow delete: if isAdmin(request.auth.uid);
+    }
+
+    // Admin logs collection (audit trail)
+    match /adminLogs/{logId} {
+      // Only admins can write admin logs
+      allow write: if isAdmin(request.auth.uid);
+      
+      // Only admins can read admin logs
+      allow read: if isAdmin(request.auth.uid);
+    }
+
+    // Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
