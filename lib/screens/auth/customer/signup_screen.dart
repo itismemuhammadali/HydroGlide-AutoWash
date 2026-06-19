@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../theme/app_colors.dart';
 import '../../../widgets/app_button.dart';
+import '../../../providers/customer_auth_provider.dart';
 import '../login_screen.dart';
 
-class SignupScreen extends StatefulWidget {
+class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
 
   @override
-  State<SignupScreen> createState() => _SignupScreenState();
+  ConsumerState<SignupScreen> createState() => _SignupScreenState();
 }
 
-class _SignupScreenState extends State<SignupScreen> {
+class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _usernameController = TextEditingController();
   final _contactController = TextEditingController();
   final _emailController = TextEditingController();
@@ -78,8 +80,60 @@ class _SignupScreenState extends State<SignupScreen> {
                 width: double.infinity,
                 child: AppButton(
                   label: 'Create account',
-                  onPressed: () {
-                    // TODO: handle signup
+                  onPressed: () async {
+                    final username = _usernameController.text.trim();
+                    final email = _emailController.text.trim();
+                    final phone = _contactController.text.trim();
+                    final password = _passwordController.text.trim();
+                    final confirmPassword = _confirmPasswordController.text.trim();
+
+                    // Validation
+                    if (username.isEmpty || email.isEmpty || phone.isEmpty || password.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Please fill in all fields')),
+                      );
+                      return;
+                    }
+
+                    if (password != confirmPassword) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Passwords do not match')),
+                      );
+                      return;
+                    }
+
+                    if (password.length < 6) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Password must be at least 6 characters')),
+                      );
+                      return;
+                    }
+
+                    // Sign up
+                    final success = await ref
+                        .read(customerAuthProvider.notifier)
+                        .signUp(
+                          email: email,
+                          password: password,
+                          name: username,
+                          phone: phone,
+                        );
+
+                    if (mounted) {
+                      if (success) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Account created successfully!')),
+                        );
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(builder: (_) => const LoginScreen()),
+                        );
+                      } else {
+                        final error = ref.read(customerAuthProvider).errorMessage;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(error ?? 'Sign up failed')),
+                        );
+                      }
+                    }
                   },
                   backgroundColor: AppColors.dark,
                   textColor: Colors.white,

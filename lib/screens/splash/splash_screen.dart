@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../onboarding/onboarding_screen.dart';
+import '../../services/auth_handler.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -22,6 +24,20 @@ class _SplashScreenState extends State<SplashScreen>
     );
     _fadeAnim = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
     _controller.forward();
+
+    _initializeAndNavigate();
+  }
+
+  /// Initialize Firebase and navigate to next screen
+  Future<void> _initializeAndNavigate() async {
+    try {
+      // Initialize Firebase
+      await AuthHandler().initializeFirebase();
+    } catch (e) {
+      print('Firebase initialization error: $e');
+    }
+
+    if (!mounted) return;
 
     Future.delayed(const Duration(seconds: 3), () {
       if (!mounted) return;

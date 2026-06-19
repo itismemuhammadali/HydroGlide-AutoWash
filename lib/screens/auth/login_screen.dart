@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/app_button.dart';
 import '../../widgets/login_header.dart';
+import '../../providers/customer_auth_provider.dart';
 import 'customer/signup_screen.dart';
 import '../shell/app_shell.dart';
 import 'forgot_password_screen.dart';
 import '../onboarding/onboarding_screen.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   final String role;
   const LoginScreen({super.key, this.role = 'Customer'});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   late String _displayedRole;
@@ -166,11 +168,36 @@ class _LoginScreenState extends State<LoginScreen> {
                       width: double.infinity,
                       child: AppButton(
                         label: 'Sign In',
-                        onPressed: () => Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(
-                            builder: (_) => AppShell(role: _displayedRole),
-                          ),
-                        ),
+                        onPressed: () async {
+                          final email = _emailController.text.trim();
+                          final password = _passwordController.text.trim();
+
+                          if (email.isEmpty || password.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Please enter email and password')),
+                            );
+                            return;
+                          }
+
+                          final success = await ref
+                              .read(customerAuthProvider.notifier)
+                              .signIn(email: email, password: password);
+
+                          if (mounted) {
+                            if (success) {
+                              Navigator.of(context).pushReplacement(
+                                MaterialPageRoute(
+                                  builder: (_) => AppShell(role: _displayedRole),
+                                ),
+                              );
+                            } else {
+                              final error = ref.read(customerAuthProvider).errorMessage;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(error ?? 'Sign in failed')),
+                              );
+                            }
+                          }
+                        },
                         backgroundColor: AppColors.dark,
                         textColor: Colors.white,
                       ),

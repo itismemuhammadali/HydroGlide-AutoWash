@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'screens/splash/splash_screen.dart';
 
 void main() {
-  runApp(const WashNRollApp());
+  runApp(const ProviderScope(child: WashNRollApp()));
 }
 
 class WashNRollApp extends StatelessWidget {
