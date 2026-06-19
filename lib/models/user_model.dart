@@ -81,6 +81,9 @@ class UserModel {
     );
   }
 
+  /// Check if user is customer
+  bool get isCustomer => role == UserRole.customer;
+
   @override
   String toString() => 'UserModel(id: $id, email: $email, role: $role, name: $name)';
 }
