@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "303406213696",
+    "project_id": "car-wash-d6200",
+    "storage_bucket": "car-wash-d6200.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:303406213696:android:5047cea026379b05474da5",
+        "android_client_info": {
+          "package_name": "com.wash.nroll"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCVDrE5JPeVZlp2R6ywW2te67ix8Y7UNQ4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
